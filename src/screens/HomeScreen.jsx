@@ -8,12 +8,25 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 import Feather from "react-native-vector-icons/Feather";
 import { fetchForecast, searchLocation } from '../api/weatherapi';
 import { weatherImages } from '../constants';
+import { getWeatherData, setWeather } from '../utils/storage';
+import LottieView from 'lottie-react-native';
 const HomeScreen = () => {
   const [showSearch, setShowSearch] = useState(false)
   const [location, setLocation] = useState([])
   const [weatherData, setWeatherData] = useState({})
+  const [isLoading, setIsLoading] = useState(true)
   useEffect(() => {
-    handleLocation({ name: "london" });
+    const initializeWeatherData = async () => {
+      const storedWeatherData = await getWeatherData();
+      if (storedWeatherData) {
+        setWeatherData(storedWeatherData);
+      } else {
+        handleLocation({ name: "London" });
+      }
+      setIsLoading(false)
+    };
+
+    initializeWeatherData();
   
   
   }, [])
@@ -30,11 +43,14 @@ const handleSearch=async (value)=>{
 }
 
 const handleLocation=async(value)=>{
-  
+
+  setIsLoading(true);
   let forecast= await fetchForecast(value.name,7)
   setShowSearch(false)
   setLocation([])
   setWeatherData(forecast)
+  await setWeather(forecast);
+  setIsLoading(false);
  
  
 
@@ -44,7 +60,8 @@ const handleLocation=async(value)=>{
   return (
     <ImageBackground source={require('../assets/images/bg.png')} className="flex-1" blurRadius={70}>
       <StatusBar translucent={true} backgroundColor={'transparent'} />
-      <SafeAreaView style={{ flex: 1 }}>
+      {
+        !isLoading?<SafeAreaView style={{ flex: 1 }}>
         <View style={{ position: "relative" }}>
           <View style={[styles.inputContainer, showSearch ? { backgroundColor: "rgba(255,255,255,0.2)" } : { backgroundColor: 'transparent' }]}>
             {
@@ -76,7 +93,7 @@ const handleLocation=async(value)=>{
             <Text style={{ fontSize: 22, fontWeight: "300" }}>{weatherData.location?.country}</Text>
           </View>
           <View style={{ justifyContent: "center", alignItems: "center" }}>
-            <Image source={weatherImages[weatherData.current?.condition.text]} style={{ height: 300, width: 300 }} />
+            <Image source={weatherImages[weatherData.current?.condition.text]?weatherImages[weatherData.current?.condition.text]:require('../assets/images/mist.png')} style={{ height: 300, width: 300 }} />
           </View>
           <View style={{ justifyContent: "center", alignItems: "center" }}>
             <Text style={{ fontSize: 50, fontWeight: "bold", color: "white" }}>{weatherData.current?.temp_c}&#176;</Text>
@@ -127,7 +144,11 @@ const handleLocation=async(value)=>{
 
         </View>
 
-      </SafeAreaView>
+      </SafeAreaView>:<View style={{flex:1,justifyContent:"center", alignItems:"center"}}>
+     <LottieView autoPlay
+          loop  style={{width:'90%',height:350}} source={require('../assets/lotties/loding.json')}/>
+    </View>
+      }
     </ImageBackground>
   )
 }
